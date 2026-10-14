@@ -1,6 +1,6 @@
-# pocket ledger｜個人記帳與預算管理工具
+# Pocket Ledger｜個人記帳與預算管理工具
 
-pocket ledger 是一個使用 HTML、CSS 與原生 JavaScript 製作的個人記帳 Web App。使用者可以記錄日常收入與支出、查看每月財務摘要、設定支出預算，並掌握各支出類別的分布。
+Pocket Ledger 是一個使用 HTML、CSS 與原生 JavaScript 製作的個人記帳 Web App。使用者可以記錄日常收入與支出、查看每月財務摘要、設定支出預算，並掌握各支出類別的分布。
 
 本專案以單一 `index.html` 作為網頁主程式，CSS 與 JavaScript 均內嵌於 HTML，不需要後端伺服器、資料庫或外部 API，並可透過 GitHub Pages 公開網站。
 
