@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8fb">
+  <meta name="description" content="簡單記錄每日收支、掌握每月預算與消費分類的個人記帳工具。">
+  <title>Pocket Ledger｜個人記帳與預算管理</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #172b4d;
+      --muted: #718096;
+      --border: #e7edf4;
+      --teal: #0d9488;
+      --teal-dark: #0f766e;
+      --teal-soft: #e6f7f4;
+      --green: #18864b;
+      --green-soft: #e9f8ef;
+      --red: #c2414d;
+      --red-soft: #fff0f1;
+      --blue: #3675d6;
+      --blue-soft: #edf4ff;
+      --amber: #b7791f;
+      --amber-soft: #fff7e6;
+      --shadow: 0 12px 34px rgba(34, 54, 82, .055);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      line-height: 1.5;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid rgba(13, 148, 136, .24);
+      outline-offset: 2px;
+    }
+    .app-shell { max-width: 1160px; margin: 0 auto; padding: 34px 28px 42px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 34px; }
+    .brand { display: flex; align-items: center; gap: 13px; min-width: 0; }
+    .brand-mark { display: grid; place-items: center; width: 48px; height: 48px; flex: 0 0 48px; border-radius: 15px; background: linear-gradient(135deg, #0d9488, #2ab7a9); color: #fff; box-shadow: 0 8px 18px rgba(13, 148, 136, .2); }
+    .brand-mark svg { width: 27px; height: 27px; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 2px; font-size: 23px; letter-spacing: -.5px; line-height: 1.25; }
+    .brand p { margin: 0; color: var(--muted); font-size: 13px; }
+    .local-badge { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #dcefe9; border-radius: 999px; color: var(--teal-dark); background: #f1fbf8; font-size: 12px; white-space: nowrap; }
+    .local-badge .dot { width: 7px; height: 7px; border-radius: 99px; background: #19a58c; }
+    .page-heading { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 18px; margin-bottom: 19px; }
+    .eyebrow { margin-bottom: 4px; color: var(--teal-dark); font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+    .page-heading h2 { margin-bottom: 4px; font-size: 25px; letter-spacing: -.55px; }
+    .page-heading p { margin-bottom: 0; color: var(--muted); font-size: 14px; }
+    .month-control { display: flex; align-items: center; gap: 10px; padding: 8px 11px 8px 13px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 3px 10px rgba(34,54,82,.025); }
+    .month-control label { color: var(--muted); font-size: 13px; white-space: nowrap; }
+    input[type="month"] { border: 0; color: var(--text); background: transparent; font-weight: 700; min-width: 142px; cursor: pointer; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .summary-card, .panel { background: var(--surface); border: 1px solid rgba(225, 233, 242, .85); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .summary-card { min-height: 145px; padding: 19px 19px 17px; position: relative; overflow: hidden; }
+    .summary-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 17px; }
+    .summary-label { color: #67768c; font-size: 13px; font-weight: 600; }
+    .summary-icon { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: 0 0 auto; }
+    .summary-icon svg { width: 18px; height: 18px; }
+    .icon-income { color: var(--green); background: var(--green-soft); }
+    .icon-expense { color: var(--red); background: var(--red-soft); }
+    .icon-balance { color: var(--blue); background: var(--blue-soft); }
+    .icon-budget { color: var(--teal); background: var(--teal-soft); }
+    .summary-value { margin: 0; font-size: clamp(20px, 2.2vw, 27px); font-weight: 760; line-height: 1.25; letter-spacing: -.6px; overflow-wrap: anywhere; }
+    .summary-hint { margin: 8px 0 0; color: #8a97a8; font-size: 11px; }
+    .positive { color: var(--green); }
+    .negative { color: var(--red); }
+    .content-grid { display: grid; grid-template-columns: minmax(0, 1.03fr) minmax(0, .97fr); gap: 20px; margin-bottom: 20px; }
+    .panel { padding: 22px; min-width: 0; }
+    .panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 22px; }
+    .panel-heading h3 { margin-bottom: 4px; font-size: 16px; letter-spacing: -.2px; }
+    .panel-heading p { margin-bottom: 0; color: var(--muted); font-size: 12px; }
+    .panel-symbol { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--surface-soft); color: var(--teal-dark); flex: 0 0 auto; }
+    .panel-symbol svg { width: 19px; height: 19px; }
+    .budget-number { display: flex; align-items: baseline; gap: 5px; margin-bottom: 7px; }
+    .budget-number strong { font-size: 29px; letter-spacing: -.7px; }
+    .budget-number span { color: var(--muted); font-size: 12px; }
+    .budget-subline { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; color: #65758b; font-size: 12px; }
+    .progress-track { width: 100%; height: 9px; border-radius: 99px; background: #edf1f6; overflow: hidden; }
+    .progress-fill { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, #0d9488, #42c5ad); transition: width .25s ease; }
+    .progress-fill.over { background: linear-gradient(90deg, #e0a13e, #d94f58); }
+    .budget-notice { display: flex; align-items: flex-start; gap: 9px; margin: 16px 0 20px; padding: 11px 12px; color: #5e7287; background: #f7fafc; border-radius: 11px; font-size: 12px; }
+    .budget-notice.warning { background: var(--amber-soft); color: #94621b; }
+    .budget-notice svg { flex: 0 0 16px; width: 16px; height: 16px; margin-top: 1px; }
+    .budget-form { display: flex; gap: 9px; align-items: end; padding-top: 17px; border-top: 1px solid var(--border); }
+    .field { min-width: 0; flex: 1; }
+    .field label { display: block; margin-bottom: 7px; color: #506176; font-size: 12px; font-weight: 650; }
+    .field input, .field select, .field textarea { width: 100%; min-height: 42px; padding: 10px 12px; border: 1px solid #dfe6ee; border-radius: 10px; color: var(--text); background: #fff; }
+    .field input::placeholder, .field textarea::placeholder { color: #a2adbc; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #73c8bc; outline: 3px solid rgba(13,148,136,.11); }
+    .btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 41px; border: 1px solid transparent; padding: 10px 15px; border-radius: 10px; font-size: 13px; font-weight: 700; transition: transform .15s ease, background .15s ease, border-color .15s ease; white-space: nowrap; }
+    .btn:active { transform: translateY(1px); }
+    .btn svg { width: 16px; height: 16px; }
+    .btn-primary { color: #fff; background: var(--teal); box-shadow: 0 4px 9px rgba(13,148,136,.12); }
+    .btn-primary:hover { background: var(--teal-dark); }
+    .btn-secondary { color: #40536b; background: #fff; border-color: #dfe6ee; }
+    .btn-secondary:hover { background: #f8fafc; border-color: #cbd5e1; }
+    .btn-quiet { min-height: 32px; padding: 6px 9px; border-radius: 8px; color: #607188; background: transparent; font-size: 12px; }
+    .btn-quiet:hover { background: #f1f5f9; color: var(--text); }
+    .btn-danger-quiet:hover { color: var(--red); background: var(--red-soft); }
+    .category-list { display: grid; gap: 17px; }
+    .category-row { display: grid; gap: 8px; }
+    .category-label-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; }
+    .category-name { display: flex; align-items: center; gap: 9px; min-width: 0; color: #43546a; font-weight: 600; }
+    .category-dot { display: block; width: 9px; height: 9px; border-radius: 4px; background: var(--teal); flex: 0 0 auto; }
+    .category-amount { color: #24364d; font-weight: 700; white-space: nowrap; }
+    .category-track { height: 6px; border-radius: 99px; overflow: hidden; background: #edf1f6; }
+    .category-fill { height: 100%; border-radius: 99px; background: #66b9ad; }
+    .category-empty { display: grid; place-items: center; gap: 8px; min-height: 150px; color: #8b98a9; text-align: center; font-size: 12px; }
+    .category-empty svg { width: 30px; height: 30px; color: #b8c4d2; }
+    .transactions-panel { padding: 22px 22px 8px; }
+    .transaction-heading { align-items: center; margin-bottom: 17px; }
+    .transaction-heading .panel-heading { margin-bottom: 0; }
+    .transaction-heading h3 { margin-bottom: 4px; }
+    .record-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .filter-tabs { display: inline-flex; padding: 4px; gap: 3px; border-radius: 11px; background: #f1f5f9; }
+    .filter-tab { border: 0; padding: 7px 13px; border-radius: 8px; color: #718096; background: transparent; font-size: 12px; font-weight: 650; }
+    .filter-tab[aria-pressed="true"] { color: #20354d; background: #fff; box-shadow: 0 2px 6px rgba(31,51,77,.08); }
+    .result-count { color: #8794a5; font-size: 12px; }
+    .transaction-list { display: grid; }
+    .transaction-item { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 16px 2px; border-bottom: 1px solid #edf1f5; }
+    .transaction-item:last-child { border-bottom: 0; }
+    .transaction-main { display: flex; align-items: center; gap: 13px; min-width: 0; }
+    .transaction-symbol { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; flex: 0 0 auto; }
+    .transaction-symbol svg { width: 18px; height: 18px; }
+    .transaction-symbol.expense { color: var(--red); background: #fff2f3; }
+    .transaction-symbol.income { color: var(--green); background: #ebf9f0; }
+    .transaction-description { min-width: 0; }
+    .transaction-description strong { display: block; overflow: hidden; color: #273951; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .transaction-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; color: #8a97a8; font-size: 11px; }
+    .transaction-note { display: block; max-width: 320px; margin-top: 3px; overflow: hidden; color: #8a97a8; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .transaction-side { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
+    .transaction-amount { min-width: 105px; text-align: right; font-size: 14px; font-weight: 750; white-space: nowrap; }
+    .transaction-amount.income { color: var(--green); }
+    .transaction-amount.expense { color: #273951; }
+    .transaction-actions { display: flex; gap: 1px; opacity: .84; }
+    .transaction-actions button { width: 31px; height: 31px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #8090a3; }
+    .transaction-actions button:hover { background: #f1f5f9; color: #273951; }
+    .transaction-actions button.delete:hover { color: var(--red); background: var(--red-soft); }
+    .transaction-actions svg { width: 15px; height: 15px; }
+    .empty-state { display: grid; place-items: center; padding: 42px 15px 48px; text-align: center; }
+    .empty-illustration { display: grid; place-items: center; width: 58px; height: 58px; margin-bottom: 13px; border-radius: 18px; color: #91a2b7; background: #f1f5f9; }
+    .empty-illustration svg { width: 26px; height: 26px; }
+    .empty-state h4 { margin: 0 0 5px; font-size: 14px; }
+    .empty-state p { max-width: 320px; margin: 0 0 15px; color: #8996a7; font-size: 12px; }
+    footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 23px 4px 0; color: #9aa5b4; font-size: 11px; }
+    footer span { display: inline-flex; align-items: center; gap: 6px; }
+    footer svg { width: 13px; height: 13px; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(18, 34, 55, .45); backdrop-filter: blur(4px); }
+    .modal-backdrop[hidden] { display: none; }
+    .modal { width: min(100%, 490px); max-height: min(92vh, 780px); overflow-y: auto; border: 1px solid rgba(255,255,255,.6); border-radius: 20px; background: #fff; box-shadow: 0 24px 80px rgba(21,39,63,.24); animation: modal-in .18s ease-out; }
+    @keyframes modal-in { from { transform: translateY(7px) scale(.99); opacity: .7; } to { transform: translateY(0) scale(1); opacity: 1; } }
+    .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 23px 24px 16px; }
+    .modal-header h3 { margin: 0 0 4px; font-size: 19px; }
+    .modal-header p { margin: 0; color: var(--muted); font-size: 12px; }
+    .modal-close { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 10px; color: #758399; background: #f3f6f9; }
+    .modal-close:hover { color: #263b55; background: #e9eef4; }
+    .modal-close svg { width: 17px; height: 17px; }
+    .modal-body { display: grid; gap: 16px; padding: 5px 24px 22px; }
+    .type-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 5px; border-radius: 12px; background: #f2f5f8; }
+    .type-option { display: flex; justify-content: center; align-items: center; gap: 8px; border: 1px solid transparent; border-radius: 9px; padding: 10px; color: #718096; background: transparent; font-size: 13px; font-weight: 700; }
+    .type-option svg { width: 16px; height: 16px; }
+    .type-option[aria-pressed="true"][data-type="expense"] { color: var(--red); border-color: #ffe0e2; background: #fff; box-shadow: 0 2px 5px rgba(31,51,77,.05); }
+    .type-option[aria-pressed="true"][data-type="income"] { color: var(--green); border-color: #d6f2e0; background: #fff; box-shadow: 0 2px 5px rgba(31,51,77,.05); }
+    .amount-field { position: relative; }
+    .amount-field .currency { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: #8190a2; font-weight: 700; }
+    .amount-field input { padding-left: 47px; height: 56px; font-size: 22px; font-weight: 750; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 9px; padding: 16px 24px 22px; border-top: 1px solid #edf1f5; }
+    .form-error { display: none; padding: 10px 12px; border-radius: 9px; color: #a52e39; background: var(--red-soft); font-size: 12px; }
+    .form-error.visible { display: block; }
+    .toast-region { position: fixed; z-index: 40; top: 20px; right: 20px; display: grid; gap: 9px; width: min(360px, calc(100vw - 40px)); pointer-events: none; }
+    .toast { display: flex; align-items: flex-start; gap: 10px; padding: 13px 15px; border: 1px solid #d7eee8; border-radius: 13px; color: #1f6258; background: #f2fcf8; box-shadow: 0 9px 30px rgba(32, 61, 81, .12); font-size: 13px; animation: toast-in .2s ease-out; }
+    .toast.error { color: #a52e39; border-color: #ffd9dd; background: #fff5f6; }
+    .toast svg { width: 17px; height: 17px; flex: 0 0 auto; }
+    @keyframes toast-in { from { transform: translateY(-5px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (max-width: 980px) {
+      .app-shell { padding: 27px 20px 32px; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .content-grid { grid-template-columns: 1fr; }
+      .summary-card { min-height: 132px; }
+    }
+    @media (max-width: 560px) {
+      .app-shell { padding: 19px 13px 25px; }
+      .topbar { align-items: flex-start; margin-bottom: 27px; }
+      .brand-mark { width: 42px; height: 42px; flex-basis: 42px; border-radius: 13px; }
+      h1 { font-size: 19px; }
+      .brand p { font-size: 11px; }
+      .local-badge { padding: 7px 9px; font-size: 10px; }
+      .page-heading { align-items: stretch; }
+      .page-heading h2 { font-size: 22px; }
+      .month-control { align-self: flex-start; }
+      .summary-grid { gap: 10px; }
+      .summary-card { min-height: 124px; padding: 14px; border-radius: 15px; }
+      .summary-top { margin-bottom: 13px; }
+      .summary-label { font-size: 12px; }
+      .summary-icon { width: 31px; height: 31px; border-radius: 10px; }
+      .summary-value { font-size: 21px; }
+      .summary-hint { font-size: 10px; }
+      .panel { padding: 18px 16px; border-radius: 16px; }
+      .budget-form { align-items: stretch; flex-direction: column; }
+      .budget-form .btn { width: 100%; }
+      .transaction-heading { align-items: flex-start; }
+      .transaction-heading > .btn { min-height: 38px; padding: 8px 11px; }
+      .transaction-heading > .btn span { display: none; }
+      .transactions-panel { padding: 17px 14px 7px; }
+      .record-controls { align-items: flex-start; }
+      .filter-tab { padding: 7px 10px; }
+      .transaction-item { align-items: flex-start; gap: 8px; padding: 14px 0; }
+      .transaction-main { gap: 9px; }
+      .transaction-symbol { width: 36px; height: 36px; border-radius: 11px; }
+      .transaction-side { align-items: flex-end; flex-direction: column; gap: 5px; }
+      .transaction-amount { min-width: 0; font-size: 13px; }
+      .transaction-actions { opacity: 1; }
+      .transaction-actions button { width: 28px; height: 27px; }
+      .transaction-note { max-width: 145px; }
+      .modal-header { padding: 20px 18px 14px; }
+      .modal-body { padding: 4px 18px 18px; }
+      .modal-footer { padding: 14px 18px 18px; }
+      footer { padding-top: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="3"/><path d="M3 9h18M7 3h10"/><path d="M15.5 14.5h.01"/></svg>
+        </div>
+        <div><h1>Pocket Ledger</h1><p>個人記帳與預算管理</p></div>
+      </div>
+      <div class="local-badge"><span class="dot" aria-hidden="true"></span>資料保存在此裝置</div>
+    </header>
+
+    <main>
+      <section aria-labelledby="overview-title">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">YOUR MONEY, MADE CLEAR</div>
+            <h2 id="overview-title">每月財務總覽</h2>
+            <p>掌握每一筆收支，讓預算安排更有方向。</p>
+          </div>
+          <div class="month-control">
+            <label for="monthPicker">查看月份</label>
+            <input id="monthPicker" type="month" aria-label="選擇要查看的月份">
+          </div>
+        </div>
+
+        <div class="summary-grid" aria-live="polite">
+          <article class="summary-card">
+            <div class="summary-top"><span class="summary-label">本月收入</span><span class="summary-icon icon-income" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></span></div>
+            <p class="summary-value positive" id="totalIncome">NT$ 0</p><p class="summary-hint">所選月份的收入總額</p>
+          </article>
+          <article class="summary-card">
+            <div class="summary-top"><span class="summary-label">本月支出</span><span class="summary-icon icon-expense" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-6-6 6 6 6-6"/></svg></span></div>
+            <p class="summary-value" id="totalExpense">NT$ 0</p><p class="summary-hint">所選月份的支出總額</p>
+          </article>
+          <article class="summary-card">
+            <div class="summary-top"><span class="summary-label">收支結餘</span><span class="summary-icon icon-balance" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-12 4h2"/></svg></span></div>
+            <p class="summary-value" id="totalBalance">NT$ 0</p><p class="summary-hint">收入減去支出</p>
+          </article>
+          <article class="summary-card">
+            <div class="summary-top"><span class="summary-label">剩餘預算</span><span class="summary-icon icon-budget" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div>
+            <p class="summary-value" id="budgetRemaining">尚未設定</p><p class="summary-hint" id="budgetSummaryHint">設定預算，追蹤支出進度</p>
+          </article>
+        </div>
+      </section>
+
+      <div class="content-grid">
+        <section class="panel" aria-labelledby="budgetTitle">
+          <div class="panel-heading">
+            <div><h3 id="budgetTitle">每月支出預算</h3><p id="budgetMonthLabel">為這個月設定支出上限</p></div>
+            <span class="panel-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l4 2M8 3.8 6.5 2M16 3.8 17.5 2"/></svg></span>
+          </div>
+          <div class="budget-number"><strong id="budgetSpent">NT$ 0</strong><span id="budgetOutOf">／尚未設定預算</span></div>
+          <div class="budget-subline"><span id="budgetUsedText">設定預算後即可查看使用進度</span><strong id="budgetPercent">—</strong></div>
+          <div class="progress-track" role="progressbar" aria-label="支出預算使用率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="budgetProgress" aria-valuetext="尚未設定預算"><div class="progress-fill" id="budgetProgressFill"></div></div>
+          <div class="budget-notice" id="budgetNotice" role="status"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg><span>設定每月預算後，就能隨時掌握支出是否接近上限。</span></div>
+          <form class="budget-form" id="budgetForm" novalidate>
+            <div class="field"><label for="budgetInput">預算金額（新臺幣）</label><input id="budgetInput" name="budget" type="number" min="1" step="1" inputmode="numeric" placeholder="例如：20000" aria-describedby="budgetHelp"></div>
+            <button class="btn btn-primary" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>儲存預算</button>
+            <span class="sr-only" id="budgetHelp">只能輸入大於零的整數；清空欄位並儲存可移除該月份預算。</span>
+          </form>
+        </section>
+
+        <section class="panel" aria-labelledby="categoryTitle">
+          <div class="panel-heading">
+            <div><h3 id="categoryTitle">支出分類</h3><p>看看這個月的錢主要花在哪裡</p></div>
+            <span class="panel-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5m0 14h17"/><rect x="7" y="11" width="3" height="5" rx=".5"/><rect x="13" y="7" width="3" height="9" rx=".5"/><rect x="19" y="9" width="2" height="7" rx=".5"/></svg></span>
+          </div>
+          <div class="category-list" id="categoryList"><div class="category-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5m0 14h17"/><path d="M7 15h2m3-5h2m3-3h2"/></svg><span>新增支出後，這裡會顯示分類統計。</span></div></div>
+        </section>
+      </div>
+
+      <section class="panel transactions-panel" aria-labelledby="transactionsTitle">
+        <div class="panel-heading transaction-heading">
+          <div><h3 id="transactionsTitle">收支紀錄</h3><p>依日期排序，隨時檢視或調整紀錄。</p></div>
+          <button class="btn btn-primary" id="addTransactionBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14m-7-7h14"/></svg><span>新增紀錄</span></button>
+        </div>
+        <div class="record-controls">
+          <div class="filter-tabs" role="group" aria-label="收支類型篩選">
+            <button class="filter-tab" type="button" data-filter="all" aria-pressed="true">全部</button>
+            <button class="filter-tab" type="button" data-filter="expense" aria-pressed="false">支出</button>
+            <button class="filter-tab" type="button" data-filter="income" aria-pressed="false">收入</button>
+          </div>
+          <span class="result-count" id="resultCount">共 0 筆紀錄</span>
+        </div>
+        <div class="transaction-list" id="transactionList" aria-live="polite">
+          <div class="empty-state"><div class="empty-illustration"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8m-8 4h4"/></svg></div><h4>還沒有收支紀錄</h4><p>新增第一筆收入或支出，就能開始掌握你的財務狀況。</p><button class="btn btn-secondary" data-action="add" type="button">新增第一筆紀錄</button></div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>資料儲存在你的瀏覽器，不會上傳至伺服器。</span>
+      <span>僅供個人收支管理 · Pocket Ledger</span>
+    </footer>
+  </div>
+
+  <div class="modal-backdrop" id="transactionModal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalDescription">
+      <div class="modal-header">
+        <div><h3 id="modalTitle">新增收支紀錄</h3><p id="modalDescription">填寫這筆交易的資訊。</p></div>
+        <button class="modal-close" type="button" id="closeModalBtn" aria-label="關閉視窗"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+      </div>
+      <form id="transactionForm" novalidate>
+        <div class="modal-body">
+          <div class="type-switch" role="group" aria-label="收支類型">
+            <button class="type-option" type="button" data-type="expense" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg>支出</button>
+            <button class="type-option" type="button" data-type="income" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>收入</button>
+          </div>
+          <div class="field"><label for="amountInput">金額（新臺幣）</label><div class="amount-field"><span class="currency" aria-hidden="true">NT$</span><input id="amountInput" name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="0" required></div></div>
+          <div class="field"><label for="titleInput">項目名稱</label><input id="titleInput" name="title" type="text" maxlength="60" placeholder="例如：午餐、每月薪資" required></div>
+          <div class="field"><label for="categoryInput">分類</label><select id="categoryInput" name="category" required></select></div>
+          <div class="field"><label for="dateInput">日期</label><input id="dateInput" name="date" type="date" required></div>
+          <div class="field"><label for="noteInput">備註（選填）</label><textarea id="noteInput" name="note" rows="2" maxlength="160" placeholder="補充說明，最多 160 個字"></textarea></div>
+          <div class="form-error" id="formError" role="alert"></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary" type="button" id="cancelModalBtn">取消</button><button class="btn btn-primary" type="submit" id="saveTransactionBtn">儲存紀錄</button></div>
+      </form>
+    </section>
+  </div>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE_KEY = 'pocketLedger_v1';
+      const EXPENSE_CATEGORIES = ['飲食', '交通', '居住', '水電', '購物', '娛樂', '教育', '醫療', '其他'];
+      const INCOME_CATEGORIES = ['薪資', '兼職', '獎金', '投資', '退款', '其他'];
+      const CATEGORY_COLORS = ['#0d9488', '#5c8ee6', '#e4a34a', '#a18be0', '#e47f91', '#58a6a0', '#8a9bb1', '#b3a15d', '#7996a8'];
+      const $ = (selector, root = document) => root.querySelector(selector);
+      const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+      const today = new Date();
+      const localDateString = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      const monthString = (date = new Date()) => localDateString(date).slice(0, 7);
+      const money = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 0 });
+      const currency = amount => `NT$ ${money.format(amount)}`;
+      const safeText = value => String(value ?? '');
+      const escapeHTML = value => safeText(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+
+      const state = {
+        transactions: [],
+        budgets: {},
+        selectedMonth: monthString(today),
+        activeFilter: 'all',
+        editingId: null,
+        modalType: 'expense',
+        lastFocusedElement: null
+      };
+
+      const els = {
+        monthPicker: $('#monthPicker'),
+        totalIncome: $('#totalIncome'),
+        totalExpense: $('#totalExpense'),
+        totalBalance: $('#totalBalance'),
+        budgetRemaining: $('#budgetRemaining'),
+        budgetSummaryHint: $('#budgetSummaryHint'),
+        budgetMonthLabel: $('#budgetMonthLabel'),
+        budgetSpent: $('#budgetSpent'),
+        budgetOutOf: $('#budgetOutOf'),
+        budgetUsedText: $('#budgetUsedText'),
+        budgetPercent: $('#budgetPercent'),
+        budgetProgress: $('#budgetProgress'),
+        budgetProgressFill: $('#budgetProgressFill'),
+        budgetNotice: $('#budgetNotice'),
+        budgetForm: $('#budgetForm'),
+        budgetInput: $('#budgetInput'),
+        categoryList: $('#categoryList'),
+        transactionList: $('#transactionList'),
+        resultCount: $('#resultCount'),
+        modal: $('#transactionModal'),
+        transactionForm: $('#transactionForm'),
+        modalTitle: $('#modalTitle'),
+        amountInput: $('#amountInput'),
+        titleInput: $('#titleInput'),
+        categoryInput: $('#categoryInput'),
+        dateInput: $('#dateInput'),
+        noteInput: $('#noteInput'),
+        formError: $('#formError'),
+        saveTransactionBtn: $('#saveTransactionBtn'),
+        toastRegion: $('#toastRegion')
+      };
+
+      function loadData() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.transactions)) {
+            state.transactions = parsed.transactions.filter(item =>
+              item && typeof item.id === 'string' &&
+              (item.type === 'income' || item.type === 'expense') &&
+              Number.isFinite(Number(item.amount)) && Number(item.amount) > 0 &&
+              typeof item.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.date)
+            ).map(item => ({
+              id: item.id,
+              type: item.type,
+              amount: Math.round(Number(item.amount)),
+              title: safeText(item.title).slice(0, 60) || '未命名項目',
+              category: safeText(item.category) || '其他',
+              date: item.date,
+              note: safeText(item.note).slice(0, 160),
+              createdAt: Number(item.createdAt) || Date.now()
+            }));
+          }
+          if (parsed && parsed.budgets && typeof parsed.budgets === 'object' && !Array.isArray(parsed.budgets)) {
+            state.budgets = Object.fromEntries(Object.entries(parsed.budgets).filter(([month, amount]) => /^\d{4}-\d{2}$/.test(month) && Number.isSafeInteger(Number(amount)) && Number(amount) > 0).map(([month, amount]) => [month, Number(amount)]));
+          }
+        } catch (error) {
+          console.warn('無法讀取先前的記帳資料：', error);
+          showToast('無法讀取先前資料，已使用空白記帳本。', 'error');
+        }
+      }
+
+      function saveData() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ transactions: state.transactions, budgets: state.budgets }));
+          return true;
+        } catch (error) {
+          console.error('無法保存記帳資料：', error);
+          showToast('瀏覽器無法保存資料。請確認網站儲存空間未被停用。', 'error');
+          return false;
+        }
+      }
+
+      function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast${type === 'error' ? ' error' : ''}`;
+        const icon = type === 'error'
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>';
+        toast.innerHTML = `${icon}<span>${escapeHTML(message)}</span>`;
+        els.toastRegion.appendChild(toast);
+        window.setTimeout(() => toast.remove(), 3400);
+      }
+
+      function iconSVG(name) {
+        const icons = {
+          expense: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg>',
+          income: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg>',
+          edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5 4 4M4 20l4-.8L19 8a2.1 2.1 0 0 0-3-3L5 16l-1 4Z"/></svg>',
+          delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+          empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8m-8 4h4"/></svg>'
+        };
+        return icons[name] || '';
+      }
+
+      function monthTransactions() {
+        return state.transactions.filter(item => item.date.slice(0, 7) === state.selectedMonth);
+      }
+
+      function getTotals(items = monthTransactions()) {
+        return items.reduce((totals, item) => {
+          totals[item.type] += item.amount;
+          return totals;
+        }, { income: 0, expense: 0 });
+      }
+
+      function formatMonthLabel(month) {
+        const [year, monthNum] = month.split('-');
+        return `${year} 年 ${Number(monthNum)} 月`;
+      }
+
+      function formatDate(dateString) {
+        const [year, month, day] = dateString.split('-');
+        return `${Number(month)}/${Number(day)}`;
+      }
+
+      function renderSummary() {
+        const totals = getTotals();
+        const balance = totals.income - totals.expense;
+        const budget = state.budgets[state.selectedMonth];
+        const remaining = Number.isFinite(budget) ? budget - totals.expense : null;
+        els.totalIncome.textContent = currency(totals.income);
+        els.totalExpense.textContent = currency(totals.expense);
+        els.totalBalance.textContent = currency(balance);
+        els.totalBalance.classList.toggle('negative', balance < 0);
+        els.totalBalance.classList.toggle('positive', balance > 0);
+        els.budgetRemaining.textContent = remaining === null ? '尚未設定' : currency(remaining);
+        els.budgetRemaining.classList.toggle('negative', remaining !== null && remaining < 0);
+        els.budgetRemaining.classList.toggle('positive', remaining !== null && remaining >= 0);
+        els.budgetSummaryHint.textContent = remaining === null ? '設定預算，追蹤支出進度' : remaining < 0 ? '本月支出已超過預算' : '本月尚可使用的預算';
+      }
+
+      function renderBudget() {
+        const totals = getTotals();
+        const budget = state.budgets[state.selectedMonth];
+        const hasBudget = Number.isFinite(budget) && budget > 0;
+        const percent = hasBudget ? (totals.expense / budget) * 100 : 0;
+        const remaining = hasBudget ? budget - totals.expense : null;
+        els.budgetMonthLabel.textContent = `${formatMonthLabel(state.selectedMonth)}的支出預算`;
+        els.budgetSpent.textContent = currency(totals.expense);
+        els.budgetOutOf.textContent = hasBudget ? `／${currency(budget)}` : '／尚未設定預算';
+        els.budgetUsedText.textContent = hasBudget ? `剩餘 ${currency(remaining)}` : '設定預算後即可查看使用進度';
+        els.budgetPercent.textContent = hasBudget ? `${Math.round(percent)}%` : '—';
+        els.budgetProgressFill.style.width = `${Math.min(percent, 100)}%`;
+        els.budgetProgressFill.classList.toggle('over', hasBudget && percent >= 100);
+        els.budgetProgress.setAttribute('aria-valuenow', String(Math.min(Math.round(percent), 100)));
+        els.budgetProgress.setAttribute('aria-valuetext', hasBudget ? `已使用 ${percent.toFixed(1)}%，${remaining < 0 ? `超支 ${currency(Math.abs(remaining))}` : `剩餘 ${currency(remaining)}`}` : '尚未設定預算');
+        els.budgetInput.value = hasBudget ? String(budget) : '';
+        els.budgetNotice.classList.toggle('warning', hasBudget && percent >= 80);
+        if (!hasBudget) {
+          els.budgetNotice.innerHTML = `${noticeIcon()}<span>設定每月預算後，就能隨時掌握支出是否接近上限。</span>`;
+        } else if (percent >= 100) {
+          els.budgetNotice.innerHTML = `${noticeIcon()}<span>已超出本月預算 <strong>${currency(Math.abs(remaining))}</strong>。可以檢視支出分類，調整接下來的消費。</span>`;
+        } else if (percent >= 80) {
+          els.budgetNotice.innerHTML = `${noticeIcon()}<span>已使用 ${Math.round(percent)}% 的預算，剩餘 <strong>${currency(remaining)}</strong>。留意接下來的支出。</span>`;
+        } else {
+          els.budgetNotice.innerHTML = `${noticeIcon()}<span>目前已使用 ${Math.round(percent)}% 的預算，還有 <strong>${currency(remaining)}</strong> 可以安排。</span>`;
+        }
+      }
+
+      function noticeIcon() {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>';
+      }
+
+      function renderCategories() {
+        const expenses = monthTransactions().filter(item => item.type === 'expense');
+        const byCategory = new Map();
+        expenses.forEach(item => byCategory.set(item.category, (byCategory.get(item.category) || 0) + item.amount));
+        const entries = Array.from(byCategory.entries()).sort((a, b) => b[1] - a[1]);
+        if (!entries.length) {
+          els.categoryList.innerHTML = '<div class="category-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5m0 14h17"/><path d="M7 15h2m3-5h2m3-3h2"/></svg><span>新增支出後，這裡會顯示分類統計。</span></div>';
+          return;
+        }
+        const maxAmount = entries[0][1];
+        els.categoryList.innerHTML = entries.map(([category, amount], index) => {
+          const share = expenses.reduce((sum, item) => sum + item.amount, 0) ? (amount / expenses.reduce((sum, item) => sum + item.amount, 0)) * 100 : 0;
+          const width = maxAmount > 0 ? (amount / maxAmount) * 100 : 0;
+          return `<div class="category-row"><div class="category-label-row"><span class="category-name"><span class="category-dot" style="background:${CATEGORY_COLORS[index % CATEGORY_COLORS.length]}"></span>${escapeHTML(category)} <span style="color:#95a1b0;font-weight:500">${Math.round(share)}%</span></span><span class="category-amount">${currency(amount)}</span></div><div class="category-track" aria-label="${escapeHTML(category)}，占分類最高金額的 ${Math.round(width)}%"><div class="category-fill" style="width:${width}%;background:${CATEGORY_COLORS[index % CATEGORY_COLORS.length]}"></div></div></div>`;
+        }).join('');
+      }
+
+      function renderTransactions() {
+        let items = monthTransactions();
+        if (state.activeFilter !== 'all') items = items.filter(item => item.type === state.activeFilter);
+        items.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+        els.resultCount.textContent = `共 ${items.length} 筆紀錄`;
+        if (!items.length) {
+          const hasMonthRecords = monthTransactions().length > 0;
+          const title = hasMonthRecords ? '沒有符合條件的紀錄' : '還沒有收支紀錄';
+          const description = hasMonthRecords ? '試試看切換收支類型，或查看其他月份。' : '新增第一筆收入或支出，就能開始掌握你的財務狀況。';
+          els.transactionList.innerHTML = `<div class="empty-state"><div class="empty-illustration">${iconSVG('empty')}</div><h4>${title}</h4><p>${description}</p><button class="btn btn-secondary" type="button" data-action="add">新增${hasMonthRecords ? '紀錄' : '第一筆紀錄'}</button></div>`;
+          return;
+        }
+        els.transactionList.innerHTML = items.map(item => {
+          const typeLabel = item.type === 'income' ? '收入' : '支出';
+          const amountText = `${item.type === 'income' ? '+' : '−'} ${currency(item.amount)}`;
+          const detail = `${escapeHTML(item.category)}<span aria-hidden="true">·</span>${formatDate(item.date)}`;
+          return `<article class="transaction-item">
+            <div class="transaction-main">
+              <span class="transaction-symbol ${item.type}" aria-hidden="true">${iconSVG(item.type)}</span>
+              <div class="transaction-description"><strong title="${escapeHTML(item.title)}">${escapeHTML(item.title)}</strong><div class="transaction-meta"><span>${detail}</span></div>${item.note ? `<span class="transaction-note" title="${escapeHTML(item.note)}">${escapeHTML(item.note)}</span>` : ''}</div>
+            </div>
+            <div class="transaction-side"><div class="transaction-amount ${item.type}" aria-label="${typeLabel} ${currency(item.amount)}">${amountText}</div><div class="transaction-actions"><button type="button" data-action="edit" data-id="${escapeHTML(item.id)}" aria-label="編輯 ${escapeHTML(item.title)}" title="編輯">${iconSVG('edit')}</button><button type="button" class="delete" data-action="delete" data-id="${escapeHTML(item.id)}" aria-label="刪除 ${escapeHTML(item.title)}" title="刪除">${iconSVG('delete')}</button></div></div>
+          </article>`;
+        }).join('');
+      }
+
+      function renderAll() {
+        renderSummary();
+        renderBudget();
+        renderCategories();
+        renderTransactions();
+      }
+
+      function updateCategoryOptions(selectedValue = '') {
+        const categories = state.modalType === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+        els.categoryInput.innerHTML = categories.map(category => `<option value="${escapeHTML(category)}">${escapeHTML(category)}</option>`).join('');
+        if (categories.includes(selectedValue)) els.categoryInput.value = selectedValue;
+      }
+
+      function setModalType(type) {
+        state.modalType = type;
+        $$('[data-type]', els.modal).forEach(button => button.setAttribute('aria-pressed', String(button.dataset.type === type)));
+        updateCategoryOptions(els.categoryInput.value);
+      }
+
+      function openModal(transaction = null) {
+        state.lastFocusedElement = document.activeElement;
+        state.editingId = transaction ? transaction.id : null;
+        els.transactionForm.reset();
+        els.formError.textContent = '';
+        els.formError.classList.remove('visible');
+        els.modalTitle.textContent = transaction ? '編輯收支紀錄' : '新增收支紀錄';
+        els.saveTransactionBtn.textContent = transaction ? '儲存修改' : '儲存紀錄';
+        setModalType(transaction ? transaction.type : 'expense');
+        els.amountInput.value = transaction ? String(transaction.amount) : '';
+        els.titleInput.value = transaction ? transaction.title : '';
+        els.dateInput.value = transaction ? transaction.date : localDateString();
+        els.noteInput.value = transaction ? transaction.note : '';
+        updateCategoryOptions(transaction ? transaction.category : '');
+        els.modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+        window.setTimeout(() => (transaction ? els.titleInput : els.amountInput).focus(), 30);
+      }
+
+      function closeModal() {
+        els.modal.hidden = true;
+        document.body.style.overflow = '';
+        if (state.lastFocusedElement && typeof state.lastFocusedElement.focus === 'function') state.lastFocusedElement.focus();
+      }
+
+      function showFormError(message) {
+        els.formError.textContent = message;
+        els.formError.classList.add('visible');
+      }
+
+      function makeId() {
+        if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
+        return `tx-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      function onTransactionSubmit(event) {
+        event.preventDefault();
+        const amountRaw = els.amountInput.value.trim();
+        const amount = Number(amountRaw);
+        const title = els.titleInput.value.trim();
+        const date = els.dateInput.value;
+        const category = els.categoryInput.value;
+        const note = els.noteInput.value.trim();
+        if (!amountRaw || !Number.isFinite(amount) || !Number.isSafeInteger(amount) || amount <= 0) {
+          showFormError('請輸入大於 0 的整數金額。');
+          els.amountInput.focus();
+          return;
+        }
+        if (!title) {
+          showFormError('請填寫項目名稱。');
+          els.titleInput.focus();
+          return;
+        }
+        if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00`))) {
+          showFormError('請選擇有效的日期。');
+          els.dateInput.focus();
+          return;
+        }
+        if (!category) {
+          showFormError('請選擇分類。');
+          els.categoryInput.focus();
+          return;
+        }
+        const existingIndex = state.transactions.findIndex(item => item.id === state.editingId);
+        const oldItem = existingIndex >= 0 ? state.transactions[existingIndex] : null;
+        const transaction = {
+          id: oldItem ? oldItem.id : makeId(),
+          type: state.modalType,
+          amount: Math.round(amount),
+          title: title.slice(0, 60),
+          category,
+          date,
+          note: note.slice(0, 160),
+          createdAt: oldItem ? oldItem.createdAt : Date.now()
+        };
+        if (oldItem) state.transactions[existingIndex] = transaction;
+        else state.transactions.push(transaction);
+        const saved = saveData();
+        closeModal();
+        renderAll();
+        if (saved) showToast(oldItem ? '收支紀錄已更新。' : '收支紀錄已新增。');
+      }
+
+      function onBudgetSubmit(event) {
+        event.preventDefault();
+        const raw = els.budgetInput.value.trim();
+        if (raw === '') {
+          if (Object.prototype.hasOwnProperty.call(state.budgets, state.selectedMonth)) {
+            delete state.budgets[state.selectedMonth];
+            const saved = saveData();
+            renderAll();
+            if (saved) showToast('已移除這個月份的預算設定。');
+          } else {
+            showToast('目前沒有預算設定需要移除。');
+          }
+          return;
+        }
+        const amount = Number(raw);
+        if (!Number.isSafeInteger(amount) || amount <= 0) {
+          showToast('預算金額必須是大於 0 的整數。', 'error');
+          els.budgetInput.focus();
+          return;
+        }
+        state.budgets[state.selectedMonth] = amount;
+        const saved = saveData();
+        renderAll();
+        if (saved) showToast(`${formatMonthLabel(state.selectedMonth)}的預算已儲存。`);
+      }
+
+      function deleteTransaction(id) {
+        const item = state.transactions.find(transaction => transaction.id === id);
+        if (!item) return;
+        const confirmed = window.confirm(`確定要刪除「${item.title}」這筆紀錄嗎？\n此操作無法復原。`);
+        if (!confirmed) return;
+        state.transactions = state.transactions.filter(transaction => transaction.id !== id);
+        const saved = saveData();
+        renderAll();
+        if (saved) showToast('收支紀錄已刪除。');
+      }
+
+      function changeMonth() {
+        const chosen = els.monthPicker.value;
+        if (!/^\d{4}-\d{2}$/.test(chosen)) return;
+        state.selectedMonth = chosen;
+        renderAll();
+      }
+
+      function init() {
+        els.monthPicker.value = state.selectedMonth;
+        loadData();
+        renderAll();
+
+        els.monthPicker.addEventListener('change', changeMonth);
+        $('#addTransactionBtn').addEventListener('click', () => openModal());
+        els.transactionList.addEventListener('click', event => {
+          const button = event.target.closest('button[data-action]');
+          if (!button) return;
+          const action = button.dataset.action;
+          const id = button.dataset.id;
+          if (action === 'add') openModal();
+          if (action === 'edit') {
+            const item = state.transactions.find(transaction => transaction.id === id);
+            if (item) openModal(item);
+          }
+          if (action === 'delete') deleteTransaction(id);
+        });
+        $$('.filter-tab').forEach(button => button.addEventListener('click', () => {
+          state.activeFilter = button.dataset.filter;
+          $$('.filter-tab').forEach(tab => tab.setAttribute('aria-pressed', String(tab === button)));
+          renderTransactions();
+        }));
+        els.budgetForm.addEventListener('submit', onBudgetSubmit);
+        $$('[data-type]', els.modal).forEach(button => button.addEventListener('click', () => setModalType(button.dataset.type)));
+        els.transactionForm.addEventListener('submit', onTransactionSubmit);
+        $('#closeModalBtn').addEventListener('click', closeModal);
+        $('#cancelModalBtn').addEventListener('click', closeModal);
+        els.modal.addEventListener('click', event => { if (event.target === els.modal) closeModal(); });
+        document.addEventListener('keydown', event => {
+          if (event.key === 'Escape' && !els.modal.hidden) closeModal();
+          if (event.key === 'Tab' && !els.modal.hidden) {
+            const focusable = $$('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])', els.modal).filter(element => element.offsetParent !== null);
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+          }
+        });
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
